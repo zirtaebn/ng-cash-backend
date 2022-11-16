@@ -55,17 +55,25 @@ export const makeTransaction = async (req:Request, res:Response) => {
             where: { id: userCashOut?.accountId }
         });
 
+
+
         // user that's gonna cash in
         const usernameCashIn: string = req.body.username;
-        
+
         const userCashIn = await User.findOne({ 
             where: { username: usernameCashIn }
         });
+
+        // check if the user that is gonna cash in exists 
+        if(!userCashIn) return res.status(404).json({ error: 'Este usuário não existe!' });
 
         const userAccountCashIn = await Account.findOne({ 
             where: { id: userCashIn?.accountId }
         });
 
+        
+
+        
         // checks if the user is trying to transfer money to themself
         if(usernameCashOut === usernameCashIn) return  res.json({ error: 'Você não pode transferir dinheiro para você mesmo!' });
 

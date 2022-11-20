@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Op } from 'sequelize';
 
 import { Account } from '../models/account.model';
 import { Transaction } from '../models/transaction.model';
@@ -14,8 +15,20 @@ export const getTransactions = async (req:Request, res:Response) => {
         where: { username }
     });
 
+    const accountId = user?.accountId;
+
     const userAccount = await Account.findOne({ 
         where: { id: user?.accountId }
+    });
+
+    const userTransactions = await Transaction.findAll({
+
+        where: {
+            [Op.or]: [
+                { debitedAccountId: userAccount?.id  },
+                { creditedAccountId : userAccount?.id }
+            ]
+        }
     });
 
     const userDebitedTransactions = await Transaction.findAll({
@@ -32,9 +45,79 @@ export const getTransactions = async (req:Request, res:Response) => {
         }
     });
 
-    if(!userDebitedTransactions && !userCreditedTransactions) return res.status(404).json({ status: 'Não há transações nessa conta!' });
+    if(!userTransactions) return res.status(404).json({ status: 'Não há transações nessa conta ainda!' });
 
-    return res.status(200).json({ status: 'Transações acessadas com sucesso!', userDebitedTransactions, userCreditedTransactions});
+    if(userTransactions.length === 0) return res.status(403).json({ error: 'Não autorizado!' });
+
+    return res.status(200).json({ status: 'Transações acessadas com sucesso!', username, accountId, userTransactions, userDebitedTransactions, userCreditedTransactions});
+
+}
+
+export const getOneTransaction = async (req:Request, res:Response) => {
+
+    const username:string = req.username;
+    if(username !== req.params.username) return res.status(403).json({ error: 'Não autorizado!' });
+
+    const id:string = req.params.id;
+
+    const user = await User.findOne({ 
+        where: { username }
+    });
+
+    const transaction = await Transaction.findOne({
+
+        where: { id }
+    });
+
+    if(!transaction) return res.status(404).json({ error: 'Transação não encontrada.'})
+
+    const secondUserTransaction = await Transaction.findOne({
+
+        where: {
+            id,
+            [Op.not]: [
+                { debitedAccountId: user?.accountId},
+                { creditedAccountId : user?.accountId }
+            ]
+        }
+    });
+
+    const secondUser = await User.findOne({
+
+        where: {
+
+            [Op.or]: [
+                { accountId: secondUserTransaction?.creditedAccountId },
+                { accountId:secondUserTransaction?.debitedAccountId }
+            ],
+            [Op.not]: [
+                { accountId: user?.accountId},
+            ]
+        }
+    });
+
+    const userInfo = {
+
+        username, 
+        accountId:user?.accountId
+    };
+
+    const secondUserInfo = {
+
+        username:secondUser?.username, 
+        accountId:secondUser?.accountId
+    }
+
+
+    return res.status(200).json({ status: 'Transação acessada com sucesso!', userInfo, secondUserInfo, transaction });
+
+}
+
+export const transaction = async (req:Request, res:Response) => {
+
+    if(req.username !== req.params.username) return res.status(403).json({ error: 'Não autorizado!' });
+
+    return res.status(200).json({ status: 'Página de transferências acessada com sucesso!'});
 
 }
 
@@ -65,7 +148,7 @@ export const makeTransaction = async (req:Request, res:Response) => {
         });
 
         // check if the user that is gonna cash in exists 
-        if(!userCashIn) return res.status(404).json({ error: 'Este usuário não existe!' });
+        if(!userCashIn) return res.json({ error: 'Este usuário não existe!' });
 
         const userAccountCashIn = await Account.findOne({ 
             where: { id: userCashIn?.accountId }
@@ -109,10 +192,10 @@ export const makeTransaction = async (req:Request, res:Response) => {
                 }
             });
 
-            return res.status(200).json({ status: 'Transação realizada com sucesso!' });
+            return res.status(200).json({ status: 'Transferência realizada com sucesso!', usernameCashOut, usernameCashIn, value });
         }
 
-        res.json({ error: 'Você não tem saldo suficiente para realizar essa transação.' });
+        res.json({ error: 'Você não tem saldo suficiente para realizar essa transferência.' });
 
     }else {
 

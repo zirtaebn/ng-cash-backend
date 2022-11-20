@@ -8,7 +8,7 @@ import { Account } from '../models/account.model';
 
 dotenv.config();
 
-export const signUp = async(req: Request, res: Response) => {   
+export const signup = async(req: Request, res: Response) => {   
 
     let { username, password } = req.body;
     const saltRounds = 10;
@@ -22,8 +22,8 @@ export const signUp = async(req: Request, res: Response) => {
     
         if(!hasUser) {
 
-            if(!userNameHasMinCharacters) return res.json({ error: 'O Username deve ter, pelo menos, 3 caracteres!' });
-            if(!passwordHasMinCharacters) return res.json({ error: 'A senha deve ter, pelo menos, 8 caracteres, um número e uma letra maiúscula!' });
+            if(!userNameHasMinCharacters) return res.json({ error: 'o username deve ter, pelo menos, 3 caracteres!' });
+            if(!passwordHasMinCharacters) return res.json({ error: 'a senha deve ter, pelo menos, 8 caracteres, um número e uma letra maiúscula!' });
 
             bcrypt.genSalt(saltRounds, (err, salt) => {
 
@@ -36,31 +36,23 @@ export const signUp = async(req: Request, res: Response) => {
             
                     await User.create({ username, password, accountId });
 
-                    const token = JWT.sign(
-
-                        { id: newAccount?.id, username: username },
-                        process.env.JWT_SECRET_KEY as string, 
-                        { expiresIn: '1d'}
-
-                    );
-
-                    res.status(201).json({ status: 'Usuário criado com sucesso!', token });
+                    res.status(201).json({ status: 'Usuário criado com sucesso!', username });
                 });
             });
         
         } else {
 
-            res.json({ error: 'Este username já existe.' });
+            res.json({ error: 'este username já existe.' });
         }
 
     } else {
 
-        res.json({ error: 'Username e/ou senha não enviados.' });
+        res.json({ error: 'username e/ou senha não enviados.' });
 
     }
 };
 
-export const logIn = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response) => {
 
     const username: string = req.body.username;
     const password: string = req.body.password;
@@ -71,30 +63,30 @@ export const logIn = async (req: Request, res: Response) => {
             where: { username }
         });
 
-        if(!user) res.status(404).json({ error: 'Este usuário não existe!' });
+        if(!user) return res.json({ error: 'este usuário não existe!' });
         
         bcrypt.compare(password, user?.password as string, (err, result) => {
 
             if(result) {
 
                 const token = JWT.sign(
-
+ 
                     { id: user?.id, username: user?.username },
                     process.env.JWT_SECRET_KEY as string, 
                     { expiresIn: '1d'}
 
                 );
 
-                return res.status(200).json({ status: 'Logado com sucesso!', token });
+                return res.status(200).json({ status: 'Logado com sucesso!', username, token });
             }
 
-            res.json({ error: 'Verifique a senha novamente!' });
+            res.json({ error: 'verifique a senha novamente!' });
 
         });
 
     } else {
 
-       res.json({ error: 'Username e/ou senha não enviados.' });
+       res.json({ error: 'username e/ou senha não enviados.' });
 
     }
 }

@@ -16,48 +16,41 @@ export const Auth = {
 
     private: (req:Request, res:Response, next:NextFunction) => {
 
-        let success = false;
+        // let success = false;878
 
-        if(req.headers.authorization) {
+        const authorization = req.headers.authorization as string;
 
-            const [ authType, token ] = req.headers.authorization.split(' ');
+        if(!authorization) {
 
-            if(authType === 'Bearer') {
+            // not authorized
+            res.status(401);
+            res.json({ error: 'Usuário não autorizado!' });
 
-                try {
+        };
 
-                    const decoded = JWT.verify(
+        const [ authType, token ] = authorization.split(' ');
 
-                        token, 
-                        process.env.JWT_SECRET_KEY as string
-                    );
+        if(authType === 'Bearer') {
 
-                    success = true;
+            try {
 
-                    console.log(decoded);
+                const decoded = JWT.verify(
+
+                    token, 
+                    process.env.JWT_SECRET_KEY as string
+                );
+
+                const { username } = decoded as TokenPayload;
+
+                req.username = username;
+                next();
                     
+            } catch (error) {
 
-                    const { username } = decoded as TokenPayload;
-
-                    req.username = username;
+                res.status(400).json({ error: 'Falha ao autorizar o token!' });
                     
-                } catch (error) {
-
-                    res.status(400).json({ error: 'Falha ao autorizar o token!' });
-                    
-                }
             }
         }
-
-        if(success) {
-
-            next();
-
-        } else {
-
-            //not authorized
-            res.status(403).json({ error: 'Não autorizado!' });
-
-        }
+        
     }
 }

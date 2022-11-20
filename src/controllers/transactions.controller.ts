@@ -47,8 +47,6 @@ export const getTransactions = async (req:Request, res:Response) => {
 
     if(!userTransactions) return res.status(404).json({ status: 'Não há transações nessa conta ainda!' });
 
-    if(userTransactions.length === 0) return res.status(403).json({ error: 'Não autorizado!' });
-
     return res.status(200).json({ status: 'Transações acessadas com sucesso!', username, accountId, userTransactions, userDebitedTransactions, userCreditedTransactions});
 
 }
